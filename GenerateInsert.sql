@@ -10,6 +10,7 @@ CREATE PROCEDURE dbo.GenerateInsert
 , @GenerateSingleInsertPerRow bit = 0
 , @UseSelectSyntax bit = 0
 , @UseColumnAliasInSelect bit = 0
+, @UseUnionAll bit = 0
 , @FormatCode bit = 1
 , @GenerateOneColumnPerLine bit = 0
 , @GenerateGo bit = 0
@@ -56,6 +57,10 @@ Arguments:
     Has effect only when @UseSelectSyntax = 1
     When 0 then syntax is like SELECT 'value1','value2'
     When 1 then syntax is like SELECT 'value1' column1,'value2' column2
+  , @UseUnionAll bit = 0
+    Has effect only when @UseUnionAll = 1
+    When 0 then syntax is UNION and sql will discard duplicated rows
+    When 1 then syntax is UNION ALL and sql will keep duplicated rows
   @FormatCode bit = 1
     When 0 then no Line Feeds are generated
     When 1 then additional Line Feeds are generated for better readibility
@@ -152,6 +157,10 @@ DECLARE @TableData table (TableRow nvarchar(max));
 DECLARE @Results table (TableRow nvarchar(max));
 DECLARE @TableRow nvarchar(max);
 DECLARE @RowNo int;
+DECLARE @Union nvarchar(9) = 'UNION';
+
+IF @UseUnionAll = 1
+ SET @Union = 'UNION ALL';
 
 IF PARSENAME(@ObjectName,3) IS NOT NULL
   OR PARSENAME(@ObjectName,4) IS NOT NULL
@@ -447,7 +456,7 @@ END ELSE BEGIN
     INSERT INTO @Results
     SELECT
       CASE WHEN @UseSelectSyntax = 1
-      THEN CASE WHEN @RowNo > 1 THEN N'UNION' + CASE WHEN @FormatCode = 1 THEN @CrLf ELSE N' ' END ELSE N'' END
+      THEN CASE WHEN @RowNo > 1 THEN @Union + CASE WHEN @FormatCode = 1 THEN @CrLf ELSE N' ' END ELSE N'' END
       ELSE CASE WHEN @RowNo > 1 THEN N',' ELSE N' ' END END
       + @TableRow;
 
